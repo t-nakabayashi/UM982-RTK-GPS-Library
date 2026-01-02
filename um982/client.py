@@ -167,12 +167,14 @@ class UM982Client:
             enable_rmc: RMC出力を有効にするか
         """
         self.output_rate = rate
+        # UM982のLOGコマンド形式: LOG <メッセージ> ONTIME <秒>
+        interval = 1.0 / rate if rate > 0 else 1.0
         cmds = [
-            f"GPGGA {rate}",
-            f"UNIHEADINGA {rate}",
+            f"LOG GPGGA ONTIME {interval}",
+            f"LOG UNIHEADINGA ONTIME {interval}",
         ]
         if enable_rmc:
-            cmds.append(f"GPRMC {rate}")
+            cmds.append(f"LOG GPRMC ONTIME {interval}")
 
         for cmd in cmds:
             self._write_line(cmd)
