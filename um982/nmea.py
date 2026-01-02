@@ -120,11 +120,12 @@ def parse_rmc(sentence: str) -> Optional[RMCData]:
 
 def parse_uniheading(sentence: str) -> Optional[UniheadingData]:
     """
-    Unicore UNIHEADING文をパース。
+    Unicore HEADING文をパース。
 
-    フォーマット: #UNIHEADINGA,<header>;<data>*<checksum>
+    フォーマット: #HEADINGA,<header>;<data>*<checksum>
+    または: #UNIHEADINGA,<header>;<data>*<checksum>
     """
-    if not sentence.startswith("#") or "UNIHEADING" not in sentence:
+    if not sentence.startswith("#") or "HEADING" not in sentence:
         return None
     if ";" not in sentence:
         return None

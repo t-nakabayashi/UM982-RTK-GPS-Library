@@ -171,7 +171,7 @@ class UM982Client:
         interval = 1.0 / rate if rate > 0 else 1.0
         cmds = [
             f"LOG GPGGA ONTIME {interval}",
-            f"LOG UNIHEADINGA ONTIME {interval}",
+            f"LOG HEADINGA ONTIME {interval}",
         ]
         if enable_rmc:
             cmds.append(f"LOG GPRMC ONTIME {interval}")
