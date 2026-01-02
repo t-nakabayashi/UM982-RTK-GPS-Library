@@ -305,7 +305,22 @@ class UM982Client:
             # $GNGGA → $GPGGA に変換（古いNTRIPサーバー互換性のため）
             if raw.startswith("$GNGGA"):
                 raw = "$GPGGA" + raw[6:]
+                # チェックサムを再計算
+                raw = self._recalc_nmea_checksum(raw)
             return raw
+
+    def _recalc_nmea_checksum(self, sentence: str) -> str:
+        """NMEAセンテンスのチェックサムを再計算"""
+        # $と*の間の文字列を取得
+        if sentence.startswith("$"):
+            sentence = sentence[1:]
+        if "*" in sentence:
+            sentence = sentence.split("*")[0]
+        # XORでチェックサム計算
+        checksum = 0
+        for char in sentence:
+            checksum ^= ord(char)
+        return f"${sentence}*{checksum:02X}"
 
     def _update_rtcm_count(self, delta: int):
         """RTCMバイト数を更新"""
