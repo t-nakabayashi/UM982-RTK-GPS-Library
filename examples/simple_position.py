@@ -29,6 +29,7 @@ def main():
     parser = argparse.ArgumentParser(description="UM982 シンプル位置取得サンプル")
     parser.add_argument("--port", default="/dev/ttyUSB0", help="シリアルポート")
     parser.add_argument("--baud", type=int, default=115200, help="ボーレート")
+    parser.add_argument("--rate", type=int, default=10, help="出力レート（Hz、デフォルト: 10）")
     parser.add_argument("--ntrip-host", help="NTRIPキャスターホスト")
     parser.add_argument("--ntrip-port", type=int, help="NTRIPポート")
     parser.add_argument("--ntrip-mount", help="NTRIPマウントポイント")
@@ -38,7 +39,7 @@ def main():
 
     # クライアント作成
     print(f"Connecting to {args.port}...", file=sys.stderr)
-    client = UM982Client(args.port, args.baud)
+    client = UM982Client(args.port, args.baud, output_rate=args.rate)
 
     try:
         client.start()

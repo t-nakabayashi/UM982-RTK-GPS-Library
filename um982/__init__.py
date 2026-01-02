@@ -32,7 +32,7 @@ NTRIPを通じてRTCM補正データを取得し、高精度RTK測位と方位�
         time.sleep(0.1)
 """
 
-from .client import UM982Client
+from .client import UM982Client, DEFAULT_OUTPUT_RATE
 from .types import PositionData, GGAData, RMCData, UniheadingData
 from .nmea import parse_gga, parse_rmc, parse_uniheading, determine_rtk_state
 from .ntrip import NtripClient
@@ -40,6 +40,7 @@ from .ntrip import NtripClient
 __version__ = "1.0.0"
 __all__ = [
     "UM982Client",
+    "DEFAULT_OUTPUT_RATE",
     "PositionData",
     "GGAData",
     "RMCData",

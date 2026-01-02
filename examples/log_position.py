@@ -39,6 +39,7 @@ def main():
     )
     parser.add_argument("--port", default="/dev/ttyUSB0", help="シリアルポート")
     parser.add_argument("--baud", type=int, default=115200, help="ボーレート")
+    parser.add_argument("--rate", type=int, default=10, help="出力レート（Hz、デフォルト: 10）")
     parser.add_argument(
         "--duration", "-d", type=int, default=3600,
         help="記録時間（秒）。デフォルト: 3600秒（1時間）"
@@ -71,7 +72,7 @@ def main():
 
     # クライアント作成
     print(f"[LOG] Connecting to {args.port}...", file=sys.stderr)
-    client = UM982Client(args.port, args.baud)
+    client = UM982Client(args.port, args.baud, output_rate=args.rate)
 
     try:
         client.start()

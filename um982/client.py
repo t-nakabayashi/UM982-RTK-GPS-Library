@@ -41,6 +41,7 @@ __version__ = "1.0.0"
 
 DEFAULT_BAUD = 115200
 DEFAULT_SERIAL_TIMEOUT = 0.5
+DEFAULT_OUTPUT_RATE = 10  # Hz
 
 
 class UM982Client:
@@ -51,12 +52,14 @@ class UM982Client:
         port: str,
         baud: int = DEFAULT_BAUD,
         timeout: float = DEFAULT_SERIAL_TIMEOUT,
+        output_rate: int = DEFAULT_OUTPUT_RATE,
     ):
         """
         Args:
             port: シリアルポート（例: "/dev/ttyUSB0"）
             baud: ボーレート（デフォルト: 115200）
             timeout: シリアルタイムアウト（秒）
+            output_rate: 出力レート（Hz、デフォルト: 10）
         """
         if serial is None:
             raise ImportError("pyserial is required. Install with: pip install pyserial")
@@ -64,6 +67,7 @@ class UM982Client:
         self.port = port
         self.baud = baud
         self.timeout = timeout
+        self.output_rate = output_rate
 
         self._ser: Optional[serial.Serial] = None
         self._write_lock = threading.Lock()
@@ -90,13 +94,21 @@ class UM982Client:
             self._ser.close()
             self._ser = None
 
-    def start(self):
-        """クライアントを開始（シリアル読み取りスレッド起動）"""
+    def start(self, configure: bool = True):
+        """
+        クライアントを開始（シリアル読み取りスレッド起動）
+
+        Args:
+            configure: 起動時に出力レートを設定するか（デフォルト: True）
+        """
         if self._ser is None:
             self.open()
         self._stop.clear()
         self._reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
         self._reader_thread.start()
+
+        if configure:
+            self.set_output_rate(self.output_rate)
 
     def stop(self):
         """クライアントを停止"""
@@ -146,14 +158,15 @@ class UM982Client:
             self._ntrip_client.stop()
             self._ntrip_client = None
 
-    def configure(self, rate: int = 10, enable_rmc: bool = False):
+    def set_output_rate(self, rate: int, enable_rmc: bool = False):
         """
-        UM982の出力メッセージを設定
+        出力レートを設定
 
         Args:
-            rate: 出力レート（Hz）
+            rate: 出力レート（Hz、1-20推奨）
             enable_rmc: RMC出力を有効にするか
         """
+        self.output_rate = rate
         cmds = [
             f"GPGGA {rate}",
             f"UNIHEADINGA {rate}",

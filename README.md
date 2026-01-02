@@ -59,7 +59,7 @@ pip install -r requirements.txt
 from um982 import UM982Client
 import time
 
-# Create and start client
+# Create and start client (default: 10Hz output)
 client = UM982Client("/dev/ttyUSB0", baud=115200)
 client.start()
 
@@ -76,6 +76,17 @@ while True:
     time.sleep(0.1)
 
 client.stop()
+```
+
+#### Changing Output Rate
+
+```python
+# Set output rate at initialization (20Hz)
+client = UM982Client("/dev/ttyUSB0", output_rate=20)
+client.start()
+
+# Or change rate after start
+client.set_output_rate(5)  # Change to 5Hz
 ```
 
 #### RTK Positioning with NTRIP
@@ -345,7 +356,7 @@ pip install -r requirements.txt
 from um982 import UM982Client
 import time
 
-# クライアント作成・開始
+# クライアント作成・開始（デフォルト: 10Hz出力）
 client = UM982Client("/dev/ttyUSB0", baud=115200)
 client.start()
 
@@ -362,6 +373,17 @@ while True:
     time.sleep(0.1)
 
 client.stop()
+```
+
+#### 出力レートの変更
+
+```python
+# 初期化時に出力レートを指定（20Hz）
+client = UM982Client("/dev/ttyUSB0", output_rate=20)
+client.start()
+
+# または開始後に変更
+client.set_output_rate(5)  # 5Hzに変更
 ```
 
 #### NTRIP接続でRTK測位
