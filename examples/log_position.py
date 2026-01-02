@@ -201,7 +201,7 @@ def main():
         tools_dir = Path(__file__).parent.parent / "tools"
         analyzer = tools_dir / "log_and_analyze.py"
         if analyzer.exists():
-            subprocess.run([sys.executable, str(analyzer), "analyze", output_file, "--plot"])
+            subprocess.run([sys.executable, str(analyzer), output_file, "--plot"])
         else:
             print(f"[LOG] Analyzer not found: {analyzer}", file=sys.stderr)
 

@@ -195,6 +195,9 @@ class UM982Client:
             hdop=gga.hdop,
             baseline_m=uni.length_m if uni else None,
             timestamp=gga.timestamp,
+            diff_age=gga.diff_age,
+            heading_stddev=uni.heading_stddev if uni else None,
+            pitch_stddev=uni.pitch_stddev if uni else None,
         )
 
     def get_gga(self) -> Optional[GGAData]:

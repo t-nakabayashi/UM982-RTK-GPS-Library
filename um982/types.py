@@ -61,6 +61,9 @@ class PositionData:
     hdop: Optional[float]           # HDOP
     baseline_m: Optional[float]     # ベースライン長（メートル）
     timestamp: float                # タイムスタンプ
+    diff_age: Optional[float] = None        # 補正データ経過時間（秒）
+    heading_stddev: Optional[float] = None  # 方位標準偏差（度）
+    pitch_stddev: Optional[float] = None    # ピッチ標準偏差（度）
 
     @property
     def speed_mps(self) -> Optional[float]:

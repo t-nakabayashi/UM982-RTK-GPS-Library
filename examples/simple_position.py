@@ -70,10 +70,14 @@ def main():
 
                 # 方位（デュアルアンテナ）
                 heading_str = f"{pos.heading:.2f}°" if pos.heading else "---"
+                heading_stddev_str = f"±{pos.heading_stddev:.2f}°" if pos.heading_stddev else ""
                 baseline_str = f"{pos.baseline_m:.3f}m" if pos.baseline_m else "---"
 
                 # 速度（RMC）
                 speed_str = f"{pos.speed_kmh:.1f}km/h" if pos.speed_kmh else "---"
+
+                # 補正データ経過時間
+                diff_age_str = f"{pos.diff_age:.1f}s" if pos.diff_age else "---"
 
                 # RTK状態
                 rtk_state = pos.rtk_state.upper().replace("_", " ")
@@ -81,8 +85,8 @@ def main():
                 print(
                     f"[{rtk_state:10s}] "
                     f"Lat: {lat_str}  Lon: {lon_str}  Alt: {alt_str}  "
-                    f"Heading: {heading_str}  Baseline: {baseline_str}  "
-                    f"Speed: {speed_str}  Sats: {pos.num_sats}"
+                    f"Heading: {heading_str}{heading_stddev_str}  Baseline: {baseline_str}  "
+                    f"Speed: {speed_str}  Sats: {pos.num_sats}  DiffAge: {diff_age_str}"
                 )
 
             time.sleep(0.5)
