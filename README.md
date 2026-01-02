@@ -592,6 +592,5 @@ MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
 
 ### 関連ドキュメント
 
-- [UM982 User Manual](https://www.unicorecomm.com/products/um982)
 - [NTRIP Protocol](https://igs.bkg.bund.de/ntrip/about)
 - [NMEA 0183](https://www.nmea.org/content/STANDARDS/NMEA_0183_Standard)

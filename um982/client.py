@@ -295,9 +295,15 @@ class UM982Client:
             self._ser.write(data)
 
     def _get_latest_gga_raw(self) -> Optional[str]:
-        """最新のGGA生データを取得"""
+        """最新のGGA生データを取得（NTRIP送信用にGPGGAに変換）"""
         with self._data_lock:
-            return self._gga.raw if self._gga else None
+            if not self._gga:
+                return None
+            raw = self._gga.raw
+            # $GNGGA → $GPGGA に変換（古いNTRIPサーバー互換性のため）
+            if raw.startswith("$GNGGA"):
+                raw = "$GPGGA" + raw[6:]
+            return raw
 
     def _update_rtcm_count(self, delta: int):
         """RTCMバイト数を更新"""
