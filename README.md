@@ -58,7 +58,26 @@ pip install -r requirements.txt
 
 ### ROS2 Integration
 
-For ROS2 users, see [um982_ros/README.md](um982_ros/README.md) for the ROS2 package documentation.
+For ROS2 users, the `um982_ros` package publishes GPS data as ROS2 messages.
+
+#### Message Conversion
+
+| Source (UM982) | ROS2 Message | Description |
+|----------------|--------------|-------------|
+| GGA (GPGGA/GNGGA) | `sensor_msgs/NavSatFix` | Position, altitude, satellite count, HDOP |
+| RMC (GPRMC/GNRMC) | `geometry_msgs/TwistStamped` | Ground speed, course (converted to ENU velocity) |
+| HEADINGA/UNIHEADING | `um982_ros/UM982Status` | Heading, pitch, baseline (dual-antenna) |
+| All above combined | `um982_ros/UM982Status` | Full integrated data including RTK status |
+
+#### Published Topics
+
+| Topic | Type | Description |
+|-------|------|-------------|
+| `gps/fix` | `sensor_msgs/NavSatFix` | Standard GPS fix (from GGA) |
+| `gps/vel` | `geometry_msgs/TwistStamped` | Velocity in ENU frame (from RMC) |
+| `gps/status` | `um982_ros/UM982Status` | Full status with heading/pitch |
+
+For detailed usage, see [um982_ros/README.md](um982_ros/README.md).
 
 ### Library Usage
 
@@ -361,7 +380,26 @@ pip install -r requirements.txt
 
 ### ROS2連携
 
-ROS2を使用する場合は、[um982_ros/README.md](um982_ros/README.md)を参照してください。
+ROS2ユーザー向けに、`um982_ros`パッケージがGPSデータをROS2メッセージとして配信します。
+
+#### メッセージ変換
+
+| 入力元（UM982） | ROS2メッセージ | 説明 |
+|----------------|---------------|------|
+| GGA (GPGGA/GNGGA) | `sensor_msgs/NavSatFix` | 位置、高度、衛星数、HDOP |
+| RMC (GPRMC/GNRMC) | `geometry_msgs/TwistStamped` | 対地速度、進行方位（ENU速度に変換） |
+| HEADINGA/UNIHEADING | `um982_ros/UM982Status` | 方位、ピッチ、ベースライン（デュアルアンテナ） |
+| 上記すべて統合 | `um982_ros/UM982Status` | RTK状態を含む全データ |
+
+#### 配信トピック
+
+| トピック | 型 | 説明 |
+|---------|-----|------|
+| `gps/fix` | `sensor_msgs/NavSatFix` | 標準GPS位置（GGAから） |
+| `gps/vel` | `geometry_msgs/TwistStamped` | ENU座標系速度（RMCから） |
+| `gps/status` | `um982_ros/UM982Status` | 方位/ピッチ含む全データ |
+
+詳細な使用方法は [um982_ros/README.md](um982_ros/README.md) を参照してください。
 
 ### ライブラリとしての使い方
 
