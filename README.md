@@ -60,22 +60,30 @@ pip install -r requirements.txt
 
 For ROS2 users, the `um982_ros` package publishes GPS data as ROS2 messages.
 
-#### Message Conversion
+#### Step 1: NMEA/Unicore Messages → Library Data Types
 
-| Source (UM982) | ROS2 Message | Description |
-|----------------|--------------|-------------|
-| GGA (GPGGA/GNGGA) | `sensor_msgs/NavSatFix` | Position, altitude, satellite count, HDOP |
-| RMC (GPRMC/GNRMC) | `geometry_msgs/TwistStamped` | Ground speed, course (converted to ENU velocity) |
-| HEADINGA/UNIHEADING | `um982_ros/UM982Status` | Heading, pitch, baseline (dual-antenna) |
-| All above combined | `um982_ros/UM982Status` | Full integrated data including RTK status |
+| Source Message | Library Type | Key Fields |
+|----------------|--------------|------------|
+| GGA (GPGGA/GNGGA) | `GGAData` | lat, lon, alt, quality, num_sats, hdop, diff_age |
+| RMC (GPRMC/GNRMC) | `RMCData` | speed_knots, course_deg, mode |
+| HEADINGA/UNIHEADING | `UniheadingData` | heading_deg, pitch_deg, baseline, stddev |
+| All above combined | `PositionData` | Integrated data with RTK state |
+
+#### Step 2: Library Data Types → ROS2 Messages
+
+| Library Type | ROS2 Message | Field Mapping |
+|--------------|--------------|---------------|
+| `GGAData` | `sensor_msgs/NavSatFix` | lat→latitude, lon→longitude, alt→altitude, quality→status |
+| `RMCData` | `geometry_msgs/TwistStamped` | speed_knots→linear velocity (ENU), course→direction |
+| `PositionData` | `um982_ros/UM982Status` | All fields including heading, pitch, baseline, rtk_state |
 
 #### Published Topics
 
-| Topic | Type | Description |
-|-------|------|-------------|
-| `gps/fix` | `sensor_msgs/NavSatFix` | Standard GPS fix (from GGA) |
-| `gps/vel` | `geometry_msgs/TwistStamped` | Velocity in ENU frame (from RMC) |
-| `gps/status` | `um982_ros/UM982Status` | Full status with heading/pitch |
+| Topic | Type | Source |
+|-------|------|--------|
+| `gps/fix` | `sensor_msgs/NavSatFix` | GGAData |
+| `gps/vel` | `geometry_msgs/TwistStamped` | RMCData |
+| `gps/status` | `um982_ros/UM982Status` | PositionData |
 
 For detailed usage, see [um982_ros/README.md](um982_ros/README.md).
 
@@ -382,22 +390,30 @@ pip install -r requirements.txt
 
 ROS2ユーザー向けに、`um982_ros`パッケージがGPSデータをROS2メッセージとして配信します。
 
-#### メッセージ変換
+#### ステップ1: NMEA/Unicoreメッセージ → ライブラリデータ型
 
-| 入力元（UM982） | ROS2メッセージ | 説明 |
-|----------------|---------------|------|
-| GGA (GPGGA/GNGGA) | `sensor_msgs/NavSatFix` | 位置、高度、衛星数、HDOP |
-| RMC (GPRMC/GNRMC) | `geometry_msgs/TwistStamped` | 対地速度、進行方位（ENU速度に変換） |
-| HEADINGA/UNIHEADING | `um982_ros/UM982Status` | 方位、ピッチ、ベースライン（デュアルアンテナ） |
-| 上記すべて統合 | `um982_ros/UM982Status` | RTK状態を含む全データ |
+| 入力メッセージ | ライブラリ型 | 主要フィールド |
+|---------------|-------------|---------------|
+| GGA (GPGGA/GNGGA) | `GGAData` | lat, lon, alt, quality, num_sats, hdop, diff_age |
+| RMC (GPRMC/GNRMC) | `RMCData` | speed_knots, course_deg, mode |
+| HEADINGA/UNIHEADING | `UniheadingData` | heading_deg, pitch_deg, baseline, stddev |
+| 上記すべて統合 | `PositionData` | RTK状態を含む統合データ |
+
+#### ステップ2: ライブラリデータ型 → ROS2メッセージ
+
+| ライブラリ型 | ROS2メッセージ | フィールド対応 |
+|-------------|---------------|---------------|
+| `GGAData` | `sensor_msgs/NavSatFix` | lat→latitude, lon→longitude, alt→altitude, quality→status |
+| `RMCData` | `geometry_msgs/TwistStamped` | speed_knots→linear velocity (ENU), course→direction |
+| `PositionData` | `um982_ros/UM982Status` | heading, pitch, baseline, rtk_state等すべて |
 
 #### 配信トピック
 
-| トピック | 型 | 説明 |
-|---------|-----|------|
-| `gps/fix` | `sensor_msgs/NavSatFix` | 標準GPS位置（GGAから） |
-| `gps/vel` | `geometry_msgs/TwistStamped` | ENU座標系速度（RMCから） |
-| `gps/status` | `um982_ros/UM982Status` | 方位/ピッチ含む全データ |
+| トピック | 型 | データ元 |
+|---------|-----|---------|
+| `gps/fix` | `sensor_msgs/NavSatFix` | GGAData |
+| `gps/vel` | `geometry_msgs/TwistStamped` | RMCData |
+| `gps/status` | `um982_ros/UM982Status` | PositionData |
 
 詳細な使用方法は [um982_ros/README.md](um982_ros/README.md) を参照してください。
 
