@@ -8,6 +8,12 @@ float64 latitude              # Latitude in decimal degrees
 float64 longitude             # Longitude in decimal degrees
 float64 altitude              # Altitude in meters (above ellipsoid)
 
+# ENU Position (meters, relative to origin)
+bool enu_valid                # True if ENU origin is set and position is valid
+float64 enu_east              # East position in meters
+float64 enu_north             # North position in meters
+float64 enu_up                # Up position in meters
+
 # RTK Status
 uint8 rtk_status              # 0=unknown, 1=standalone, 2=dgps, 4=rtk_fix, 5=rtk_float
 string rtk_status_string      # Human readable RTK status

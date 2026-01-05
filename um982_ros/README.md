@@ -11,18 +11,20 @@ ROS2 driver for UM982 dual-antenna RTK GNSS module. Publishes both standard ROS2
 
 ### Features
 
-- **Standard Messages**: `sensor_msgs/NavSatFix`, `geometry_msgs/TwistStamped`
-- **Custom Message**: `um982_ros/UM982Status` with full data including heading/pitch
+- **Standard Messages**: `sensor_msgs/NavSatFix`, `geometry_msgs/TwistStamped`, `geometry_msgs/PoseStamped`
+- **Custom Message**: `um982_ros/UM982Status` with full data including heading/pitch/ENU
+- **ENU Coordinates**: WGS84 to ENU conversion with configurable origin
+- **TF Broadcast**: Optional TF transform publishing
 - **NTRIP Support**: Built-in NTRIP client for RTK corrections
-- **Configurable**: Output rate, serial parameters via ROS2 parameters
 
 ### Published Topics
 
 | Topic | Type | Description |
 |-------|------|-------------|
-| `gps/fix` | `sensor_msgs/NavSatFix` | Standard GPS fix message |
+| `gps/fix` | `sensor_msgs/NavSatFix` | Standard GPS fix message (WGS84) |
 | `gps/vel` | `geometry_msgs/TwistStamped` | Velocity in ENU frame |
-| `gps/status` | `um982_ros/UM982Status` | Full status with heading/pitch |
+| `gps/pose` | `geometry_msgs/PoseStamped` | ENU position with heading (requires enu.enabled) |
+| `gps/status` | `um982_ros/UM982Status` | Full status with heading/pitch/ENU |
 
 ### Installation
 
@@ -47,6 +49,26 @@ source install/setup.bash
 ros2 launch um982_ros um982.launch.py port:=/dev/ttyUSB0
 ```
 
+#### With ENU Coordinates
+
+```bash
+ros2 run um982_ros um982_node --ros-args \
+  -p port:=/dev/ttyUSB0 \
+  -p enu.enabled:=true \
+  -p enu.origin_lat:=35.0 \
+  -p enu.origin_lon:=139.0 \
+  -p enu.origin_alt:=0.0
+```
+
+#### With ENU (First Fix as Origin)
+
+```bash
+ros2 run um982_ros um982_node --ros-args \
+  -p port:=/dev/ttyUSB0 \
+  -p enu.enabled:=true \
+  -p enu.use_first_fix:=true
+```
+
 #### With NTRIP (RTK Corrections)
 
 ```bash
@@ -59,20 +81,39 @@ ros2 launch um982_ros um982_ntrip.launch.py \
   ntrip_password:=password
 ```
 
-#### Using Parameter File
-
-```bash
-ros2 launch um982_ros um982.launch.py params_file:=/path/to/params.yaml
-```
-
 ### Parameters
+
+#### Basic Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `port` | string | `/dev/ttyUSB0` | Serial port |
 | `baud` | int | `115200` | Baud rate |
 | `output_rate` | int | `10` | Output rate (Hz) |
-| `frame_id` | string | `gps` | TF frame ID |
+| `frame_id` | string | `gps` | Frame ID for messages |
+
+#### ENU Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enu.enabled` | bool | `false` | Enable ENU output |
+| `enu.origin_lat` | float | `0.0` | Origin latitude (degrees) |
+| `enu.origin_lon` | float | `0.0` | Origin longitude (degrees) |
+| `enu.origin_alt` | float | `0.0` | Origin altitude (meters) |
+| `enu.use_first_fix` | bool | `false` | Use first valid fix as origin |
+
+#### TF Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tf.publish_tf` | bool | `false` | Enable TF broadcast |
+| `tf.parent_frame` | string | `map` | TF parent frame |
+| `tf.child_frame` | string | `gps` | TF child frame |
+
+#### NTRIP Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
 | `ntrip.enabled` | bool | `false` | Enable NTRIP |
 | `ntrip.host` | string | `""` | NTRIP caster host |
 | `ntrip.port` | int | `2101` | NTRIP caster port |
@@ -83,13 +124,17 @@ ros2 launch um982_ros um982.launch.py params_file:=/path/to/params.yaml
 
 ### Custom Message: UM982Status
 
-The `um982_ros/UM982Status` message contains all data from the UM982 module:
-
 ```
-# Position
+# Position (WGS84)
 float64 latitude
 float64 longitude
 float64 altitude
+
+# ENU Position (meters, relative to origin)
+bool enu_valid
+float64 enu_east
+float64 enu_north
+float64 enu_up
 
 # RTK Status
 uint8 rtk_status          # 0=unknown, 1=standalone, 2=dgps, 4=rtk_fix, 5=rtk_float
@@ -116,6 +161,16 @@ float32 course            # degrees
 uint32 rtcm_bytes_received
 ```
 
+### Coordinate Conversion
+
+WGS84 to ENU conversion uses ECEF (Earth-Centered, Earth-Fixed) as intermediate:
+
+```
+WGS84 (lat, lon, alt) → ECEF (X, Y, Z) → ENU (East, North, Up)
+```
+
+The conversion is based on WGS84 ellipsoid parameters and provides cm-level accuracy.
+
 ### RTK Status Values
 
 | Value | Constant | Description | Typical Accuracy |
@@ -126,7 +181,7 @@ uint32 rtcm_bytes_received
 | 4 | `STATUS_RTK_FIX` | RTK Fixed | ~1cm |
 | 5 | `STATUS_RTK_FLOAT` | RTK Float | ~10cm |
 
-### Example Subscriber
+### Example: Using ENU Position
 
 ```python
 import rclpy
@@ -143,10 +198,9 @@ class GPSSubscriber(Node):
             10)
 
     def callback(self, msg):
-        if msg.rtk_status == UM982Status.STATUS_RTK_FIX:
+        if msg.enu_valid:
             self.get_logger().info(
-                f'RTK Fix: {msg.latitude:.8f}, {msg.longitude:.8f}, '
-                f'Heading: {msg.heading:.1f} deg'
+                f'ENU: E={msg.enu_east:.3f}m, N={msg.enu_north:.3f}m, U={msg.enu_up:.3f}m'
             )
 
 def main():
@@ -163,22 +217,24 @@ if __name__ == '__main__':
 <a name="japanese"></a>
 ## 日本語
 
-UM982デュアルアンテナRTK GNSSモジュール用のROS2ドライバー。標準ROS2メッセージとカスタムメッセージ（方位/ピッチ含む）の両方を配信します。
+UM982デュアルアンテナRTK GNSSモジュール用のROS2ドライバー。標準ROS2メッセージとカスタムメッセージ（方位/ピッチ/ENU座標含む）を配信します。
 
 ### 特徴
 
-- **標準メッセージ**: `sensor_msgs/NavSatFix`, `geometry_msgs/TwistStamped`
-- **カスタムメッセージ**: `um982_ros/UM982Status`（方位/ピッチ等全データ含む）
+- **標準メッセージ**: `sensor_msgs/NavSatFix`, `geometry_msgs/TwistStamped`, `geometry_msgs/PoseStamped`
+- **カスタムメッセージ**: `um982_ros/UM982Status`（方位/ピッチ/ENU座標含む）
+- **ENU座標**: WGS84からENU座標への変換（原点設定可能）
+- **TFブロードキャスト**: オプションでTF変換を配信
 - **NTRIP対応**: RTK補正データ受信用NTRIPクライアント内蔵
-- **設定可能**: 出力レート、シリアル設定をROS2パラメータで設定
 
 ### 配信トピック
 
 | トピック | 型 | 説明 |
 |---------|-----|------|
-| `gps/fix` | `sensor_msgs/NavSatFix` | 標準GPS位置メッセージ |
+| `gps/fix` | `sensor_msgs/NavSatFix` | 標準GPS位置メッセージ（WGS84） |
 | `gps/vel` | `geometry_msgs/TwistStamped` | ENU座標系での速度 |
-| `gps/status` | `um982_ros/UM982Status` | 方位/ピッチ含む全データ |
+| `gps/pose` | `geometry_msgs/PoseStamped` | ENU位置と方位（enu.enabled時） |
+| `gps/status` | `um982_ros/UM982Status` | 方位/ピッチ/ENU含む全データ |
 
 ### インストール
 
@@ -203,6 +259,26 @@ source install/setup.bash
 ros2 launch um982_ros um982.launch.py port:=/dev/ttyUSB0
 ```
 
+#### ENU座標を使用
+
+```bash
+ros2 run um982_ros um982_node --ros-args \
+  -p port:=/dev/ttyUSB0 \
+  -p enu.enabled:=true \
+  -p enu.origin_lat:=35.0 \
+  -p enu.origin_lon:=139.0 \
+  -p enu.origin_alt:=0.0
+```
+
+#### ENU座標（最初の測位を原点に）
+
+```bash
+ros2 run um982_ros um982_node --ros-args \
+  -p port:=/dev/ttyUSB0 \
+  -p enu.enabled:=true \
+  -p enu.use_first_fix:=true
+```
+
 #### NTRIP使用（RTK補正）
 
 ```bash
@@ -215,20 +291,39 @@ ros2 launch um982_ros um982_ntrip.launch.py \
   ntrip_password:=password
 ```
 
-#### パラメータファイル使用
-
-```bash
-ros2 launch um982_ros um982.launch.py params_file:=/path/to/params.yaml
-```
-
 ### パラメータ
+
+#### 基本パラメータ
 
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|---------|------|
 | `port` | string | `/dev/ttyUSB0` | シリアルポート |
 | `baud` | int | `115200` | ボーレート |
 | `output_rate` | int | `10` | 出力レート（Hz） |
-| `frame_id` | string | `gps` | TFフレームID |
+| `frame_id` | string | `gps` | メッセージのフレームID |
+
+#### ENUパラメータ
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|---------|------|
+| `enu.enabled` | bool | `false` | ENU出力を有効化 |
+| `enu.origin_lat` | float | `0.0` | 原点緯度（度） |
+| `enu.origin_lon` | float | `0.0` | 原点経度（度） |
+| `enu.origin_alt` | float | `0.0` | 原点高度（メートル） |
+| `enu.use_first_fix` | bool | `false` | 最初の測位を原点に使用 |
+
+#### TFパラメータ
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|---------|------|
+| `tf.publish_tf` | bool | `false` | TFブロードキャストを有効化 |
+| `tf.parent_frame` | string | `map` | TF親フレーム |
+| `tf.child_frame` | string | `gps` | TF子フレーム |
+
+#### NTRIPパラメータ
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|---------|------|
 | `ntrip.enabled` | bool | `false` | NTRIP有効化 |
 | `ntrip.host` | string | `""` | NTRIPキャスターホスト |
 | `ntrip.port` | int | `2101` | NTRIPキャスターポート |
@@ -239,13 +334,17 @@ ros2 launch um982_ros um982.launch.py params_file:=/path/to/params.yaml
 
 ### カスタムメッセージ: UM982Status
 
-`um982_ros/UM982Status`メッセージにはUM982モジュールの全データが含まれます：
-
 ```
-# 位置
+# 位置（WGS84）
 float64 latitude          # 緯度（10進数度）
 float64 longitude         # 経度（10進数度）
 float64 altitude          # 高度（メートル）
+
+# ENU位置（メートル、原点からの相対位置）
+bool enu_valid            # ENU座標が有効か
+float64 enu_east          # 東方向（メートル）
+float64 enu_north         # 北方向（メートル）
+float64 enu_up            # 上方向（メートル）
 
 # RTK状態
 uint8 rtk_status          # 0=不明, 1=単独, 2=DGPS, 4=RTK Fix, 5=RTK Float
@@ -272,6 +371,16 @@ float32 course            # 進行方位（度）
 uint32 rtcm_bytes_received  # 受信RTCMバイト数
 ```
 
+### 座標変換
+
+WGS84からENU座標への変換はECEF（地心地固座標系）を中間座標として使用：
+
+```
+WGS84 (lat, lon, alt) → ECEF (X, Y, Z) → ENU (East, North, Up)
+```
+
+WGS84楕円体パラメータに基づき、cm級の精度で変換します。
+
 ### RTK状態値
 
 | 値 | 定数 | 説明 | 代表的な精度 |
@@ -282,7 +391,7 @@ uint32 rtcm_bytes_received  # 受信RTCMバイト数
 | 4 | `STATUS_RTK_FIX` | RTK Fix | 約1cm |
 | 5 | `STATUS_RTK_FLOAT` | RTK Float | 約10cm |
 
-### サブスクライバーの例
+### 使用例: ENU位置を取得
 
 ```python
 import rclpy
@@ -299,10 +408,9 @@ class GPSSubscriber(Node):
             10)
 
     def callback(self, msg):
-        if msg.rtk_status == UM982Status.STATUS_RTK_FIX:
+        if msg.enu_valid:
             self.get_logger().info(
-                f'RTK Fix: {msg.latitude:.8f}, {msg.longitude:.8f}, '
-                f'方位: {msg.heading:.1f}度'
+                f'ENU: E={msg.enu_east:.3f}m, N={msg.enu_north:.3f}m, U={msg.enu_up:.3f}m'
             )
 
 def main():

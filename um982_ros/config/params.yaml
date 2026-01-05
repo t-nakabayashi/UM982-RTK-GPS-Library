@@ -16,3 +16,17 @@ um982_node:
       user: ""
       password: ""
       gga_interval: 5.0  # seconds
+
+    # ENU coordinate settings
+    enu:
+      enabled: false
+      origin_lat: 0.0       # Origin latitude (degrees)
+      origin_lon: 0.0       # Origin longitude (degrees)
+      origin_alt: 0.0       # Origin altitude (meters)
+      use_first_fix: false  # Use first valid fix as origin
+
+    # TF broadcast settings
+    tf:
+      publish_tf: false     # Enable TF broadcast
+      parent_frame: "map"   # Parent frame ID
+      child_frame: "gps"    # Child frame ID
