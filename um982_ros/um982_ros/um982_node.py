@@ -81,11 +81,19 @@ class UM982Node(Node):
         self.declare_parameter('tf.parent_frame', 'map')
         self.declare_parameter('tf.child_frame', 'gps')
 
+        # Heading offset parameter
+        self.declare_parameter('heading.offset', 0.0)
+
         # Get parameters
         self.port = self.get_parameter('port').value
         self.baud = self.get_parameter('baud').value
         self.output_rate = self.get_parameter('output_rate').value
         self.frame_id = self.get_parameter('frame_id').value
+
+        # Heading offset (degrees)
+        self.heading_offset = self.get_parameter('heading.offset').value
+        if self.heading_offset != 0.0:
+            self.get_logger().info(f'Heading offset: {self.heading_offset:.1f} degrees')
 
         # ENU state
         self.enu_enabled = self.get_parameter('enu.enabled').value
@@ -157,6 +165,15 @@ class UM982Node(Node):
         except Exception as e:
             self.get_logger().error(f'Failed to initialize UM982 client: {e}')
             raise
+
+    def _apply_heading_offset(self, heading: float) -> float:
+        """Apply heading offset and normalize to 0-360 range."""
+        corrected = heading + self.heading_offset
+        # Normalize to 0-360
+        corrected = corrected % 360.0
+        if corrected < 0:
+            corrected += 360.0
+        return corrected
 
     def _start_ntrip(self):
         """Start NTRIP client for RTK corrections"""
@@ -298,10 +315,10 @@ class UM982Node(Node):
         msg.hdop = float(pos.hdop) if pos.hdop is not None else 99.9
         msg.diff_age = float(pos.diff_age) if pos.diff_age is not None else 0.0
 
-        # Dual Antenna Heading
+        # Dual Antenna Heading (with offset applied)
         msg.heading_valid = pos.heading is not None
         if pos.heading is not None:
-            msg.heading = float(pos.heading)
+            msg.heading = float(self._apply_heading_offset(pos.heading))
             msg.pitch = float(pos.pitch) if pos.pitch is not None else 0.0
             msg.heading_stddev = float(pos.heading_stddev) if pos.heading_stddev is not None else 0.0
             msg.pitch_stddev = float(pos.pitch_stddev) if pos.pitch_stddev is not None else 0.0
@@ -333,9 +350,10 @@ class UM982Node(Node):
         msg.pose.position.y = enu_pos[1]  # North
         msg.pose.position.z = enu_pos[2]  # Up
 
-        # Orientation from heading
+        # Orientation from heading (with offset applied)
         if pos.heading is not None:
-            qx, qy, qz, qw = heading_to_quaternion(pos.heading)
+            corrected_heading = self._apply_heading_offset(pos.heading)
+            qx, qy, qz, qw = heading_to_quaternion(corrected_heading)
         else:
             qx, qy, qz, qw = identity_quaternion()
 
@@ -360,8 +378,10 @@ class UM982Node(Node):
         t.transform.translation.y = enu_pos[1]
         t.transform.translation.z = enu_pos[2]
 
+        # Rotation from heading (with offset applied)
         if pos.heading is not None:
-            qx, qy, qz, qw = heading_to_quaternion(pos.heading)
+            corrected_heading = self._apply_heading_offset(pos.heading)
+            qx, qy, qz, qw = heading_to_quaternion(corrected_heading)
         else:
             qx, qy, qz, qw = identity_quaternion()
 

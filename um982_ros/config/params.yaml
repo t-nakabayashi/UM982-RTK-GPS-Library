@@ -30,3 +30,7 @@ um982_node:
       publish_tf: false     # Enable TF broadcast
       parent_frame: "map"   # Parent frame ID
       child_frame: "gps"    # Child frame ID
+
+    # Heading offset settings
+    heading:
+      offset: 0.0           # Heading offset in degrees (see README for guidelines)

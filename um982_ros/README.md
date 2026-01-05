@@ -110,6 +110,12 @@ ros2 launch um982_ros um982_ntrip.launch.py \
 | `tf.parent_frame` | string | `map` | TF parent frame |
 | `tf.child_frame` | string | `gps` | TF child frame |
 
+#### Heading Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `heading.offset` | float | `0.0` | Heading offset in degrees |
+
 #### NTRIP Parameters
 
 | Parameter | Type | Default | Description |
@@ -180,6 +186,34 @@ The conversion is based on WGS84 ellipsoid parameters and provides cm-level accu
 | 2 | `STATUS_DGPS` | Differential GPS | ~1m |
 | 4 | `STATUS_RTK_FIX` | RTK Fixed | ~1cm |
 | 5 | `STATUS_RTK_FLOAT` | RTK Float | ~10cm |
+
+### Antenna Placement and Heading Offset
+
+The UM982 dual-antenna heading is determined by the direction from ANT1 to ANT2. To align the heading output with your robot's forward direction, adjust the `heading.offset` parameter.
+
+```
+       ANT2
+        ^
+        |  (heading direction)
+        |
+       ANT1
+```
+
+#### Offset Determination Guide
+
+| ANT1 Position | ANT2 Position | Robot Forward | Offset |
+|---------------|---------------|---------------|--------|
+| Rear | Front | Forward | 0° |
+| Front | Rear | Forward | 180° |
+| Right | Left | Forward | +90° |
+| Left | Right | Forward | -90° |
+
+**Formula**: `heading.offset = (Robot forward direction) - (ANT1→ANT2 direction)`
+
+**Example**: If ANT1 is on the left side and ANT2 is on the right side of your robot, the ANT1→ANT2 direction points to the right (+90° from forward). To correct this:
+```bash
+ros2 run um982_ros um982_node --ros-args -p heading.offset:=-90.0
+```
 
 ### Example: Using ENU Position
 
@@ -320,6 +354,12 @@ ros2 launch um982_ros um982_ntrip.launch.py \
 | `tf.parent_frame` | string | `map` | TF親フレーム |
 | `tf.child_frame` | string | `gps` | TF子フレーム |
 
+#### 方位パラメータ
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|---------|------|
+| `heading.offset` | float | `0.0` | 方位オフセット（度） |
+
 #### NTRIPパラメータ
 
 | パラメータ | 型 | デフォルト | 説明 |
@@ -390,6 +430,34 @@ WGS84楕円体パラメータに基づき、cm級の精度で変換します。
 | 2 | `STATUS_DGPS` | DGPS | 約1m |
 | 4 | `STATUS_RTK_FIX` | RTK Fix | 約1cm |
 | 5 | `STATUS_RTK_FLOAT` | RTK Float | 約10cm |
+
+### アンテナ配置と方位オフセット
+
+UM982のデュアルアンテナ方位は、ANT1からANT2への方向で決定されます。ロボットの前方方向と方位出力を一致させるには、`heading.offset`パラメータを調整します。
+
+```
+       ANT2
+        ^
+        |  （方位の方向）
+        |
+       ANT1
+```
+
+#### オフセット決定ガイド
+
+| ANT1位置 | ANT2位置 | ロボット前方 | オフセット |
+|----------|----------|-------------|-----------|
+| 後方 | 前方 | 前進方向 | 0° |
+| 前方 | 後方 | 前進方向 | 180° |
+| 右側 | 左側 | 前進方向 | +90° |
+| 左側 | 右側 | 前進方向 | -90° |
+
+**計算式**: `heading.offset = (ロボット前方方向) - (ANT1→ANT2方向)`
+
+**例**: ANT1がロボットの左側、ANT2が右側にある場合、ANT1→ANT2の方向は右向き（前方から+90°）になります。これを補正するには：
+```bash
+ros2 run um982_ros um982_node --ros-args -p heading.offset:=-90.0
+```
 
 ### 使用例: ENU位置を取得
 
