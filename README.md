@@ -41,6 +41,11 @@ pip install -r requirements.txt
 │   ├── nmea.py                 # NMEA/Unicore parser
 │   ├── ntrip.py                # NTRIP client
 │   └── types.py                # Data type definitions
+├── um982_ros/                  # ROS2 package
+│   ├── msg/                    # Custom message definitions
+│   ├── launch/                 # Launch files
+│   ├── config/                 # Parameter files
+│   └── um982_ros/              # ROS2 node
 ├── examples/                   # Example programs
 │   ├── simple_position.py      # Simple position retrieval
 │   ├── callback_example.py     # Callback usage example
@@ -50,6 +55,10 @@ pip install -r requirements.txt
 ├── requirements.txt
 └── README.md
 ```
+
+### ROS2 Integration
+
+For ROS2 users, see [um982_ros/README.md](um982_ros/README.md) for the ROS2 package documentation.
 
 ### Library Usage
 
@@ -338,6 +347,11 @@ pip install -r requirements.txt
 │   ├── nmea.py                 # NMEA/Unicoreパーサー
 │   ├── ntrip.py                # NTRIPクライアント
 │   └── types.py                # データ型定義
+├── um982_ros/                  # ROS2パッケージ
+│   ├── msg/                    # カスタムメッセージ定義
+│   ├── launch/                 # Launchファイル
+│   ├── config/                 # パラメータファイル
+│   └── um982_ros/              # ROS2ノード
 ├── examples/                   # サンプルプログラム
 │   ├── simple_position.py      # シンプルな位置取得
 │   ├── callback_example.py     # コールバック使用例
@@ -347,6 +361,10 @@ pip install -r requirements.txt
 ├── requirements.txt
 └── README.md
 ```
+
+### ROS2連携
+
+ROS2を使用する場合は、[um982_ros/README.md](um982_ros/README.md)を参照してください。
 
 ### ライブラリとしての使い方
 
