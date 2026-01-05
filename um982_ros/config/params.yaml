@@ -1,0 +1,18 @@
+# UM982 ROS2 Node Parameters
+um982_node:
+  ros__parameters:
+    # Serial port settings
+    port: "/dev/ttyUSB0"
+    baud: 115200
+    output_rate: 10  # Hz
+    frame_id: "gps"
+
+    # NTRIP settings (for RTK corrections)
+    ntrip:
+      enabled: false
+      host: ""
+      port: 2101
+      mountpoint: ""
+      user: ""
+      password: ""
+      gga_interval: 5.0  # seconds
