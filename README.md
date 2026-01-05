@@ -263,8 +263,6 @@ USB ─────────────────────── UART (
 | Baud Rate | Use Case |
 |-----------|----------|
 | 115200 | General use (default) |
-| 460800 | High-rate output |
-| 921600 | Maximum speed |
 
 ### Troubleshooting
 
@@ -304,7 +302,6 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ### References
 
-- [UM982 User Manual](https://www.unicorecomm.com/products/um982)
 - [NTRIP Protocol](https://igs.bkg.bund.de/ntrip/about)
 - [NMEA 0183](https://www.nmea.org/content/STANDARDS/NMEA_0183_Standard)
 
