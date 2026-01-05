@@ -1,0 +1,42 @@
+lidar_gps_fusion:
+  ros__parameters:
+    #----------------------------------
+    # Input topic settings
+    #----------------------------------
+    lidar_odom_topic: "/odom"           # FastLIO odometry topic
+    gps_status_topic: "/gps/status"     # UM982 status topic
+
+    #----------------------------------
+    # Output settings
+    #----------------------------------
+    output_odom_topic: "/fused_odom"    # Output odometry topic
+    publish_tf: true                     # Publish TF (map -> odom)
+    map_frame: "map"                     # Map frame name
+    odom_frame: "odom"                   # Odom frame name
+
+    #----------------------------------
+    # GPS usage condition
+    #----------------------------------
+    gps_use_condition: "rtk_fix"        # "rtk_fix" or "hdop"
+    hdop_threshold: 1.0                  # HDOP threshold (for hdop mode)
+
+    #----------------------------------
+    # Correction settings
+    #----------------------------------
+    correction_rate: 0.05               # Correction rate alpha (0.0-1.0)
+                                        # Lower = smoother, Higher = faster tracking
+    correct_xy: true                    # Correct XY position
+    correct_z: true                     # Correct Z position
+    correct_yaw: true                   # Correct yaw angle
+
+    #----------------------------------
+    # Initialization settings
+    #----------------------------------
+    wait_for_gps_init: true             # Wait for RTK Fix at startup
+    init_timeout: 30.0                  # Initialization timeout [seconds] (0 = infinite)
+
+    #----------------------------------
+    # Diagnostics settings
+    #----------------------------------
+    publish_diagnostics: true           # Publish diagnostics topic
+    diagnostics_rate: 1.0               # Diagnostics publish rate [Hz]
