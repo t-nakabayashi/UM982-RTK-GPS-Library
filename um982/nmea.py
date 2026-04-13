@@ -85,10 +85,80 @@ def gps_week_seconds_to_unix(week: int, seconds: float,
     """
     GPS 週番号と週内秒から Unix 時刻（UTC）を構築。
 
-    注: leap_seconds は GPS-UTC オフセット（2017 年以降 18 秒）。将来
-    追加される閏秒に追従する必要がある場合は呼び出し側で上書きする。
+    注: leap_seconds は GPS-UTC オフセット（2017 年以降 18 秒）。将来の閏秒
+    挿入に追従するため、Unicore の GPSUTCA / RECTIMEA ログから実機側の
+    真値を取得して呼び出し側で上書きすることを推奨。
     """
     return GPS_EPOCH_UNIX + week * 7 * 86400 + seconds - leap_seconds
+
+
+def parse_gpsutc(sentence: str) -> Optional[int]:
+    """
+    Unicore GPSUTCA ログから現時点の閏秒 (GPST-UTC 整数秒差) を取得。
+
+    フォーマット:
+      #GPSUTCA,<header>;<utc_wn>,<tot>,<A0>,<A1>,<wn_lsf>,<dn>,
+                       <deltat_ls>,<deltat_lsf>,<deltat_utc>,<reserved>*<crc>
+
+    戻り値:
+        deltat_ls（現在の閏秒、例: 18）。不正なら None。
+    """
+    if not sentence.startswith("#") or "GPSUTC" not in sentence:
+        return None
+    if ";" not in sentence:
+        return None
+    try:
+        data_part = sentence.split(";", 1)[1]
+        if "*" in data_part:
+            data_part = data_part.split("*", 1)[0]
+        fields = data_part.split(",")
+        if len(fields) < 7:
+            return None
+        deltat_ls = int(fields[6])
+    except (ValueError, IndexError):
+        return None
+    # Sanity: 閏秒は 0〜60 程度を想定
+    if not (0 <= deltat_ls <= 60):
+        logger.warning("GPSUTC: suspicious deltat_ls=%d, ignoring", deltat_ls)
+        return None
+    return deltat_ls
+
+
+def parse_rectime(sentence: str) -> Optional[int]:
+    """
+    Unicore RECTIMEA ログから現時点の閏秒を取得。
+
+    フォーマット:
+      #RECTIMEA,<header>;<clock_status>,<offset>,<offset_std>,<utc_offset>,
+                        <utc_year>,<utc_month>,<utc_day>,<utc_hour>,<utc_min>,
+                        <utc_ms>,<utc_status>*<crc>
+
+    `utc_offset` は「UTC = GPST + utc_offset + receiver_clock_offset」
+    で定義されるため、整数閏秒値は -round(utc_offset)。utc_status が
+    VALID でない場合は採用しない。
+    """
+    if not sentence.startswith("#") or "RECTIME" not in sentence:
+        return None
+    if ";" not in sentence:
+        return None
+    try:
+        data_part = sentence.split(";", 1)[1]
+        if "*" in data_part:
+            data_part = data_part.split("*", 1)[0]
+        fields = data_part.split(",")
+        if len(fields) < 11:
+            return None
+        utc_status = fields[10].strip().upper()
+        if utc_status != "VALID":
+            return None
+        utc_offset = float(fields[3])
+    except (ValueError, IndexError):
+        return None
+    leap = int(round(-utc_offset))
+    if not (0 <= leap <= 60):
+        logger.warning("RECTIME: suspicious utc_offset=%f, ignoring", utc_offset)
+        return None
+    return leap
 
 
 def nmea_deg_to_decimal(value: str, direction: str) -> Optional[float]:
@@ -219,12 +289,18 @@ def parse_rmc(sentence: str) -> Optional[RMCData]:
     )
 
 
-def parse_uniheading(sentence: str) -> Optional[UniheadingData]:
+def parse_uniheading(sentence: str,
+                     leap_seconds: int = GPS_LEAP_SECONDS) -> Optional[UniheadingData]:
     """
     Unicore HEADING文をパース。
 
     フォーマット: #HEADINGA,<header>;<data>*<checksum>
     または: #UNIHEADINGA,<header>;<data>*<checksum>
+
+    Args:
+        sentence: HEADINGA センテンス
+        leap_seconds: GPS-UTC の閏秒（`GPSUTCA` / `RECTIMEA` から取得した
+                      実機由来の値を渡すことを推奨。未指定時は定数 18 秒）
     """
     if not sentence.startswith("#") or "HEADING" not in sentence:
         return None
@@ -266,7 +342,7 @@ def parse_uniheading(sentence: str) -> Optional[UniheadingData]:
             week = safe_int(header_fields[5])
             seconds = safe_float(header_fields[6])
             if week is not None and seconds is not None and week > 0:
-                timestamp = gps_week_seconds_to_unix(week, seconds)
+                timestamp = gps_week_seconds_to_unix(week, seconds, leap_seconds)
         if timestamp is None:
             logger.error("HEADINGA: invalid GPS week/seconds in header %r, "
                          "discarding sentence: %s", header_part, sentence)

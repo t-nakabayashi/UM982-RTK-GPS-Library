@@ -97,6 +97,7 @@ def main():
         start_time = time.time()
         record_count = 0
         last_progress = 0
+        last_leap_state: tuple = (None, None)
 
         with open(output_file, "w") as f:
             while True:
@@ -105,9 +106,17 @@ def main():
                     print(f"\n[LOG] Duration reached: {args.duration}秒", file=sys.stderr)
                     break
 
+                # 閏秒ソースの更新を監視（GPSUTCA/RECTIMEA 受信時に変化する）
+                leap_state = client.get_leap_seconds()
+                if leap_state != last_leap_state:
+                    print(f"[LOG] Leap seconds: {leap_state[0]} "
+                          f"(source={leap_state[1]})", file=sys.stderr)
+                    last_leap_state = leap_state
+
                 pos = client.get_position()
                 if pos and pos.is_valid:
                     # log_and_analyze.py互換のJSON形式で出力
+                    leap, leap_src = client.get_leap_seconds()
                     record = {
                         "timestamp": pos.timestamp,
                         "rtk_state": pos.rtk_state,
@@ -120,6 +129,8 @@ def main():
                         "diff_age_s": None,
                         "ref_station_id": None,
                         "rtcm_bytes": client.get_rtcm_bytes(),
+                        "leap_seconds": leap,
+                        "leap_seconds_source": leap_src,
                     }
 
                     # UNIHEADING データ

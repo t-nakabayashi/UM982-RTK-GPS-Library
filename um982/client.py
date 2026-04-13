@@ -23,6 +23,7 @@ UM982 RTK GPSクライアント
         time.sleep(0.1)
 """
 
+import logging
 import sys
 import threading
 import time
@@ -33,9 +34,19 @@ try:
 except ImportError:
     serial = None
 
-from .nmea import parse_gga, parse_rmc, parse_uniheading, determine_rtk_state
+from .nmea import (
+    GPS_LEAP_SECONDS,
+    determine_rtk_state,
+    parse_gga,
+    parse_gpsutc,
+    parse_rectime,
+    parse_rmc,
+    parse_uniheading,
+)
 from .ntrip import NtripClient
 from .types import GGAData, RMCData, UniheadingData, PositionData
+
+logger = logging.getLogger(__name__)
 
 __version__ = "1.0.0"
 
@@ -77,6 +88,11 @@ class UM982Client:
         self._rmc: Optional[RMCData] = None
         self._uniheading: Optional[UniheadingData] = None
         self._rtcm_bytes = 0
+
+        # GPS-UTC 閏秒。受信機の GPSUTCA / RECTIMEA ログが届き次第、
+        # 実機由来の値で上書きされる。届くまでは定数 18 秒を暫定使用。
+        self._leap_seconds: int = GPS_LEAP_SECONDS
+        self._leap_seconds_source: Optional[str] = None  # "GPSUTC" or "RECTIME"
 
         self._reader_thread: Optional[threading.Thread] = None
         self._ntrip_client: Optional[NtripClient] = None
@@ -172,6 +188,13 @@ class UM982Client:
         cmds = [
             f"LOG GPGGA ONTIME {interval}",
             f"LOG HEADINGA ONTIME {interval}",
+            # GPS-UTC 閏秒の実機値を取得するためのログ。
+            # GPSUTCA: 放送暦の UTC パラメータ（deltat_ls = 現在の閏秒）。
+            #          更新は稀なので ONCHANGED で十分。
+            # RECTIMEA: 受信機が計算した UTC offset。60 秒毎にサンプルし、
+            #          GPSUTCA 未受信時のフォールバックとして利用。
+            "LOG GPSUTCA ONCHANGED",
+            "LOG RECTIMEA ONTIME 60",
         ]
         if enable_rmc:
             cmds.append(f"LOG GPRMC ONTIME {interval}")
@@ -235,6 +258,16 @@ class UM982Client:
         with self._data_lock:
             return self._rtcm_bytes
 
+    def get_leap_seconds(self) -> tuple:
+        """
+        現在使用している GPS-UTC 閏秒値とその取得元を返す。
+
+        Returns:
+            (leap_seconds, source) — source は "GPSUTC" / "RECTIME" /
+            None（まだ実機由来の値を取得していない場合）
+        """
+        return (self._leap_seconds, self._leap_seconds_source)
+
     def set_position_callback(self, callback: Optional[Callable[[PositionData], None]]):
         """
         位置データ更新時のコールバックを設定
@@ -249,6 +282,19 @@ class UM982Client:
         while not self._stop.is_set():
             line = self._readline()
             if not line:
+                continue
+
+            # 閏秒更新（GPSUTCA / RECTIMEA）。GPSUTCA を優先し、RECTIMEA は
+            # GPSUTCA 未受信時のフォールバック。値が変わった時だけログ。
+            if line.startswith("#GPSUTC"):
+                leap = parse_gpsutc(line)
+                if leap is not None:
+                    self._apply_leap_seconds(leap, "GPSUTC")
+                continue
+            if line.startswith("#RECTIME"):
+                leap = parse_rectime(line)
+                if leap is not None:
+                    self._apply_leap_seconds(leap, "RECTIME")
                 continue
 
             gga = parse_gga(line)
@@ -267,10 +313,30 @@ class UM982Client:
                     self._rmc = rmc
                 continue
 
-            uni = parse_uniheading(line)
+            uni = parse_uniheading(line, leap_seconds=self._leap_seconds)
             if uni:
                 with self._data_lock:
                     self._uniheading = uni
+
+    def _apply_leap_seconds(self, leap: int, source: str):
+        """
+        GPSUTCA / RECTIMEA から取得した閏秒値を適用。
+
+        優先度: GPSUTC > RECTIME。GPSUTC で既に設定済みの場合、RECTIME からの
+        更新はスキップする（ただし値が食い違う場合は警告）。
+        """
+        if self._leap_seconds_source == "GPSUTC" and source == "RECTIME":
+            if leap != self._leap_seconds:
+                logger.warning(
+                    "RECTIME leap=%d disagrees with GPSUTC leap=%d; keeping GPSUTC",
+                    leap, self._leap_seconds,
+                )
+            return
+        if leap != self._leap_seconds or source != self._leap_seconds_source:
+            logger.info("Leap seconds updated: %d -> %d (source=%s)",
+                        self._leap_seconds, leap, source)
+        self._leap_seconds = leap
+        self._leap_seconds_source = source
 
     def _readline(self) -> Optional[str]:
         """1行読み取り"""

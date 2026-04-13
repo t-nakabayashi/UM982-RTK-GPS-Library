@@ -46,8 +46,10 @@ class UniheadingData:
     num_obs: Optional[int]          # 観測数
     num_multi: Optional[int]        # マルチ周波数観測数
     timestamp: float                # GNSS UTC 時刻（Unix時間、Unicoreヘッダの
-                                    # GPS週+週内秒を閏秒18sで換算）。解析失敗時
-                                    # はセンテンスごと破棄
+                                    # GPS週+週内秒を閏秒で UTC に換算。閏秒は
+                                    # 受信機の GPSUTCA/RECTIMEA から取得した
+                                    # 実機由来の値を使用し、未取得時は暫定
+                                    # 18s）。解析失敗時はセンテンスごと破棄
 
 
 @dataclass

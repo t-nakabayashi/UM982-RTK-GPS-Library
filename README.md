@@ -153,12 +153,52 @@ while True:
 | `num_sats` | int | Number of satellites |
 | `hdop` | float | HDOP |
 | `baseline_m` | float | Baseline length (meters) |
-| `timestamp` | float | GNSS UTC fix time as Unix time (from GGA time field; date taken from host UTC clock). Sentences with unparseable time fields are discarded. |
+| `timestamp` | float | GNSS UTC fix time as Unix time (see [Timestamp handling](#timestamp-handling)). |
 | `diff_age` | float | Correction data age (seconds) |
 | `heading_stddev` | float | Heading standard deviation (degrees) |
 | `pitch_stddev` | float | Pitch standard deviation (degrees) |
 | `is_valid` | bool | Valid position data - property |
 | `is_rtk_fix` | bool | RTK Fix status - property |
+
+### Timestamp handling
+
+All `timestamp` fields (`GGAData.timestamp`, `RMCData.timestamp`,
+`UniheadingData.timestamp`, `PositionData.timestamp`) are **GNSS-derived UTC
+Unix time**, not host receive time. The reconstruction strategy depends on the
+source sentence:
+
+| Source | Time source | Notes |
+|--------|-------------|-------|
+| `$xxGGA` | UTC `hhmmss.sss` field; UTC date taken from the host clock | Date is chosen from `today / today±1` to be closest to host UTC, so it is robust across UTC midnight as long as the host clock is within ~12 h of true UTC. |
+| `$xxRMC` | UTC date `ddmmyy` + time `hhmmss.sss` | Self-contained — host clock is not consulted. |
+| `#HEADINGA` | Receiver header GPS week + seconds-of-week, converted to UTC using GPS-UTC leap seconds | Leap seconds are dynamically learned (see below). |
+
+Sentences whose time fields cannot be parsed are **discarded** (logged via
+`logging` at ERROR level) instead of being timestamped with the host clock —
+such data is treated as abnormal.
+
+#### Leap second handling
+
+Converting GPS time (used in `#HEADINGA` headers) to UTC requires the current
+GPS-UTC leap second offset (18 s as of 2017-01-01, but subject to change by
+IERS). `UM982Client` automatically requests these Unicore logs at startup and
+updates its leap second value when they arrive:
+
+- `LOG GPSUTCA ONCHANGED` — GPS broadcast UTC parameters (`deltat_ls`).
+  Authoritative; preferred source.
+- `LOG RECTIMEA ONTIME 60` — receiver-computed UTC offset. Used as a
+  fallback before `GPSUTCA` is received.
+
+Until either log arrives (typically within tens of seconds of acquiring
+satellites), the constant `GPS_LEAP_SECONDS = 18` is used as a provisional
+value. The current value and its source can be inspected:
+
+```python
+leap, source = client.get_leap_seconds()
+print(f"leap={leap}, source={source}")  # e.g., "leap=18, source=GPSUTC"
+```
+
+If `GPSUTC` and `RECTIME` disagree, `GPSUTC` wins and a warning is logged.
 
 ### Example Programs
 
@@ -450,12 +490,53 @@ while True:
 | `num_sats` | int | 使用衛星数 |
 | `hdop` | float | HDOP |
 | `baseline_m` | float | ベースライン長（メートル） |
-| `timestamp` | float | GNSS の UTC fix 時刻（Unix 時間、GGA の時刻フィールド由来。日付は PC の UTC 日付で補完）。時刻が不正なセンテンスは破棄されます。 |
+| `timestamp` | float | GNSS の UTC fix 時刻（Unix 時間、詳細は [タイムスタンプの扱い](#タイムスタンプの扱い) を参照）。 |
 | `diff_age` | float | 補正データ経過時間（秒） |
 | `heading_stddev` | float | 方位標準偏差（度） |
 | `pitch_stddev` | float | ピッチ標準偏差（度） |
 | `is_valid` | bool | 有効な位置データか - プロパティ |
 | `is_rtk_fix` | bool | RTK Fixか - プロパティ |
+
+### タイムスタンプの扱い
+
+`GGAData.timestamp` / `RMCData.timestamp` / `UniheadingData.timestamp` /
+`PositionData.timestamp` のすべてのタイムスタンプは、PC の受信時刻ではなく
+**GNSS 由来の UTC Unix 時間** です。センテンス種別ごとの構築方法は以下の
+通りです。
+
+| Source | 時刻ソース | 備考 |
+|--------|-----------|------|
+| `$xxGGA` | UTC `hhmmss.sss`（日付は PC 時計の UTC 日付で補完） | `today / today±1` のうち PC の UTC 時刻に最も近い日付を選ぶため、UTC 日付境界付近でも PC 時計が真の UTC から ±12h 以内であれば正しく再構築される。 |
+| `$xxRMC` | UTC 日付 `ddmmyy` + 時刻 `hhmmss.sss` | 自己完結。PC 時計を参照しない。 |
+| `#HEADINGA` | 受信機ヘッダの GPS 週 + 週内秒 → 閏秒を引いて UTC に変換 | 閏秒は動的学習（後述）。 |
+
+時刻フィールドが解析不能なセンテンスは **破棄** されます（`logging` に
+ERROR レベルで記録）。PC 時計へのフォールバックは行いません。異常値として
+扱うためです。
+
+#### 閏秒の扱い
+
+`#HEADINGA` ヘッダの GPS 時を UTC へ換算するには GPS-UTC 閏秒値が必要です
+（2017-01-01 以降は 18 秒。将来 IERS により変更される可能性あり）。
+`UM982Client` は起動時に以下の Unicore ログを自動要求し、届き次第
+閏秒値を更新します。
+
+- `LOG GPSUTCA ONCHANGED` — GPS 放送暦から得られる UTC パラメータ
+  （`deltat_ls`）。最も権威あるソースで、優先採用。
+- `LOG RECTIMEA ONTIME 60` — 受信機が計算した UTC offset。`GPSUTCA`
+  到着前のフォールバックとして利用。
+
+どちらかのログが届くまでは暫定値 `GPS_LEAP_SECONDS = 18` を使用します
+（衛星捕捉後、通常は数十秒で届きます）。現在値と取得元は以下で確認
+できます。
+
+```python
+leap, source = client.get_leap_seconds()
+print(f"leap={leap}, source={source}")  # 例: "leap=18, source=GPSUTC"
+```
+
+`GPSUTC` と `RECTIME` の値が食い違う場合は `GPSUTC` を採用し、警告を
+ログに残します。
 
 ### サンプルプログラム
 
