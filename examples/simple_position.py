@@ -65,20 +65,22 @@ def main():
 
             if pos and pos.is_valid:
                 # 緯度・経度・高度
-                lat_str = f"{pos.lat:.8f}" if pos.lat else "---"
-                lon_str = f"{pos.lon:.8f}" if pos.lon else "---"
-                alt_str = f"{pos.alt:.2f}m" if pos.alt else "---"
+                lat_str = f"{pos.lat:.8f}" if pos.lat is not None else "---"
+                lon_str = f"{pos.lon:.8f}" if pos.lon is not None else "---"
+                alt_str = f"{pos.alt:.2f}m" if pos.alt is not None else "---"
 
                 # 方位（デュアルアンテナ）
-                heading_str = f"{pos.heading:.2f}°" if pos.heading else "---"
-                heading_stddev_str = f"±{pos.heading_stddev:.2f}°" if pos.heading_stddev else ""
-                baseline_str = f"{pos.baseline_m:.3f}m" if pos.baseline_m else "---"
+                heading_str = f"{pos.heading:.2f}°" if pos.heading is not None else "---"
+                heading_stddev_str = (
+                    f"±{pos.heading_stddev:.2f}°" if pos.heading_stddev is not None else ""
+                )
+                baseline_str = f"{pos.baseline_m:.3f}m" if pos.baseline_m is not None else "---"
 
                 # 速度（RMC）
-                speed_str = f"{pos.speed_kmh:.1f}km/h" if pos.speed_kmh else "---"
+                speed_str = f"{pos.speed_kmh:.1f}km/h" if pos.speed_kmh is not None else "---"
 
                 # 補正データ経過時間
-                diff_age_str = f"{pos.diff_age:.1f}s" if pos.diff_age else "---"
+                diff_age_str = f"{pos.diff_age:.1f}s" if pos.diff_age is not None else "---"
 
                 # RTK状態
                 rtk_state = pos.rtk_state.upper().replace("_", " ")

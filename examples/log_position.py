@@ -161,11 +161,11 @@ def main():
 
                     # コンソール表示
                     if args.pretty:
-                        lat_str = f"{pos.lat:.8f}" if pos.lat else "---"
-                        lon_str = f"{pos.lon:.8f}" if pos.lon else "---"
-                        alt_str = f"{pos.alt:.1f}" if pos.alt else "---"
-                        heading_str = f"{pos.heading:.1f}" if pos.heading else "---"
-                        baseline_str = f"{pos.baseline_m:.3f}" if pos.baseline_m else "---"
+                        lat_str = f"{pos.lat:.8f}" if pos.lat is not None else "---"
+                        lon_str = f"{pos.lon:.8f}" if pos.lon is not None else "---"
+                        alt_str = f"{pos.alt:.1f}" if pos.alt is not None else "---"
+                        heading_str = f"{pos.heading:.1f}" if pos.heading is not None else "---"
+                        baseline_str = f"{pos.baseline_m:.3f}" if pos.baseline_m is not None else "---"
                         time_str = time.strftime('%H:%M:%S')
                         print(
                             f"[{time_str}] {pos.rtk_state:12s} "
