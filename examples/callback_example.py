@@ -25,12 +25,13 @@ def on_position_update(pos: PositionData):
 
     # RTK Fixの時だけ詳細表示
     if pos.is_rtk_fix:
+        heading_str = f"{pos.heading:.2f}°" if pos.heading is not None else "---"
         print(
             f"[RTK FIX] "
             f"Lat: {pos.lat:.8f}  "
             f"Lon: {pos.lon:.8f}  "
             f"Alt: {pos.alt:.2f}m  "
-            f"Heading: {pos.heading:.2f}°" if pos.heading else ""
+            f"Heading: {heading_str}"
         )
     else:
         print(f"[{pos.rtk_state}] Waiting for RTK Fix...")
