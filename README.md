@@ -153,7 +153,7 @@ while True:
 | `num_sats` | int | Number of satellites |
 | `hdop` | float | HDOP |
 | `baseline_m` | float | Baseline length (meters) |
-| `timestamp` | float | Timestamp |
+| `timestamp` | float | GNSS UTC fix time as Unix time (from GGA time field; date taken from host UTC clock). Sentences with unparseable time fields are discarded. |
 | `diff_age` | float | Correction data age (seconds) |
 | `heading_stddev` | float | Heading standard deviation (degrees) |
 | `pitch_stddev` | float | Pitch standard deviation (degrees) |
@@ -450,7 +450,7 @@ while True:
 | `num_sats` | int | 使用衛星数 |
 | `hdop` | float | HDOP |
 | `baseline_m` | float | ベースライン長（メートル） |
-| `timestamp` | float | タイムスタンプ |
+| `timestamp` | float | GNSS の UTC fix 時刻（Unix 時間、GGA の時刻フィールド由来。日付は PC の UTC 日付で補完）。時刻が不正なセンテンスは破棄されます。 |
 | `diff_age` | float | 補正データ経過時間（秒） |
 | `heading_stddev` | float | 方位標準偏差（度） |
 | `pitch_stddev` | float | ピッチ標準偏差（度） |

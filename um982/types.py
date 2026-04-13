@@ -17,7 +17,8 @@ class GGAData:
     hdop: Optional[float]         # 水平精度低下率
     diff_age: Optional[float]     # 差分補正データの経過時間（秒）
     ref_station_id: Optional[str] # 基準局ID
-    timestamp: float              # 受信時刻（Unix時間）
+    timestamp: float              # GNSS UTC fix 時刻（Unix時間、GGAのhhmmss由来・
+                                  # 日付はPC UTC日で補完）。解析失敗時はセンテンスごと破棄
     raw: str                      # 生のNMEA文
 
 
@@ -27,7 +28,8 @@ class RMCData:
     speed_knots: Optional[float]  # 対地速度（ノット）
     course_deg: Optional[float]   # 進行方位（度）
     mode: Optional[str]           # モード指標（R=RTK Fix, F=RTK Float, D=DGPS, A=単独）
-    timestamp: float              # 受信時刻（Unix時間）
+    timestamp: float              # GNSS UTC fix 時刻（Unix時間、RMCのUTC日付+時刻
+                                  # から構築）。解析失敗時はセンテンスごと破棄
 
 
 @dataclass
@@ -43,7 +45,9 @@ class UniheadingData:
     num_soln_svs: Optional[int]     # 解に使用した衛星数
     num_obs: Optional[int]          # 観測数
     num_multi: Optional[int]        # マルチ周波数観測数
-    timestamp: float                # 受信時刻（Unix時間）
+    timestamp: float                # GNSS UTC 時刻（Unix時間、Unicoreヘッダの
+                                    # GPS週+週内秒を閏秒18sで換算）。解析失敗時
+                                    # はセンテンスごと破棄
 
 
 @dataclass
@@ -60,7 +64,7 @@ class PositionData:
     num_sats: Optional[int]         # 使用衛星数
     hdop: Optional[float]           # HDOP
     baseline_m: Optional[float]     # ベースライン長（メートル）
-    timestamp: float                # タイムスタンプ
+    timestamp: float                # GNSS UTC fix 時刻（Unix時間、GGA由来）
     diff_age: Optional[float] = None        # 補正データ経過時間（秒）
     heading_stddev: Optional[float] = None  # 方位標準偏差（度）
     pitch_stddev: Optional[float] = None    # ピッチ標準偏差（度）
